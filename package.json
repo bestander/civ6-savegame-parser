@@ -1,23 +1,28 @@
 {
   "name": "civ6-savegame-parser",
   "version": "0.0.0",
-  "description": "Reads the game state out of a Sid Meier's Civilization VI .Civ6Save file: map, cities, units, players, diplomacy, religion, eras, great works, fog of war — without the game.",
+  "description": "Reads the game state out of a Sid Meier's Civilization VI .Civ6Save file: map, cities, units, players, diplomacy, religion, eras, great works, fog of war \u2014 without the game.",
   "license": "MIT",
   "repository": "github:bestander/civ6-savegame-parser",
   "type": "commonjs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist", "data"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && mkdir -p dist/vendor && cp src/vendor/*.cjs dist/vendor/",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "oracle": "tsx scripts/oracle.ts",
     "delta": "tsx scripts/delta.ts",
     "tables": "tsx scripts/tables.ts",
-    "annotate": "tsx scripts/annotate.ts"
+    "annotate": "tsx scripts/annotate.ts",
+    "prepublishOnly": "npm run build"
   },
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "tsx": "^4.19.0",

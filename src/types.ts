@@ -29,8 +29,6 @@ export interface Civ6Header {
     slots: Array<Record<string, HeaderValue>>;
     /** Header keys whose property name is unknown, as hex of the hash. */
     unnamedKeys: string[];
-    /** Enabled mods. */
-    mods: Array<{ id: string; title: string; version?: string }>;
 }
 
 export interface Civ6Metadata {
@@ -146,15 +144,17 @@ export interface Civ6Plot {
     index: number;
     x: number;
     y: number;
+    /** `TERRAIN_*` (display name when the type is not in the dictionary). */
     terrain: string;
     /** `null` when flat; `Hill`, `Mountain`. */
     form: string | null;
+    /** `FEATURE_*`, `RESOURCE_*`, `IMPROVEMENT_*`, `CONTINENT_*`, or null. */
     feature: string | null;
     resource: string | null;
     improvement: string | null;
     continent: string | null;
-    /** `ROUTE_*` on the plot, or null. */
-    route: string | null;
+    /** The game's route index on the plot (0 = ancient road, …), or null without one. */
+    routeIndex: number | null;
     pillaged: boolean;
     /** Bit mask of river edges as the game stores it. */
     riverMap: number;
@@ -306,6 +306,32 @@ export interface Civ6GreatPersonRecord {
     recruitedTurn: number | null;
 }
 
+export interface Civ6Emergency {
+    emergency: string;
+    /** The session turn it was proposed at. */
+    turn: number;
+    /** Votes per player slot (64 entries). */
+    votes: number[];
+}
+
+export interface Civ6Alliance {
+    a: number;
+    b: number;
+    /** `ALLIANCE_RESEARCH`, `ALLIANCE_MILITARY`, … */
+    type: string;
+    startTurn: number;
+}
+
+export interface Civ6DealItem {
+    /** `DIPLOACTION_OPEN_BORDERS`, `DIPLOACTION_ALLIANCE`, `DIPLOACTION_MAKE_PEACE`, … */
+    action: string;
+    /** Turn the deal began; -1 for a pending proposal. */
+    turn: number;
+    duration: number;
+    from: number;
+    to: number;
+}
+
 export interface Civ6Resolution {
     resolution: string;
     /** The chosen target: a type name when it is a database row, else the raw value (a player id for player-targeted resolutions). */
@@ -339,8 +365,14 @@ export interface Civ6Save {
     greatWorks: Civ6GreatWork[];
     /** Great people offered and recruited so far. */
     greatPeople: Civ6GreatPersonRecord[];
-    /** World Congress resolutions in effect (Gathering Storm). */
+    /** World Congress resolutions, the latest session's first (Gathering Storm). */
     resolutions: Civ6Resolution[];
+    /** World Congress emergencies with their votes. */
+    emergencies: Civ6Emergency[];
+    /** Alliances per pair with type and start turn; null without the expansion. */
+    alliances: Civ6Alliance[] | null;
+    /** Agreement items of deals in effect or pending, one per direction. */
+    deals: Civ6DealItem[];
     /**
      * The hall-of-fame graphs: dataset (`SCOREPERTURN`, `TOTALGOLD`, `ERASCORE`, `CULTURE`,
      * `TOTALCOMBATS`, …) → player id → per-turn points. Yields and score are dense; `TOTAL*`

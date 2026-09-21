@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Mod id="c1f4a0e0-5e1e-4c6e-9d0a-saveoracle001" version="4">
+  <Properties>
+    <Name>Save Oracle</Name>
+    <Description>Dumps the live game state (players, cities, units, diplomacy) into the save (game property + game configuration) and Lua.log so a save can be checked against the truth. Read-only; changes nothing in the game.</Description>
+    <Teaser>State dump for civ6-savegame-parser</Teaser>
+    <Authors>civ6-savegame-parser</Authors>
+    <CompatibleVersions>1.2,2.0</CompatibleVersions>
+    <AffectsSavedGames>0</AffectsSavedGames>
+  </Properties>
+  <InGameActions>
+    <AddGameplayScripts id="oracle_gameplay">
+      <File>SaveOracle.lua</File>
+    </AddGameplayScripts>
+    <ImportFiles id="oracle_plan">
+      <File>Plan.lua</File>
+    </ImportFiles>
+    <AddUserInterfaces id="oracle_ui">
+      <Properties>
+        <Context>InGame</Context>
+      </Properties>
+      <File>SaveOracle.xml</File>
+    </AddUserInterfaces>
+  </InGameActions>
+  <Files>
+    <File>SaveOracle.lua</File>
+    <File>SaveOracle.xml</File>
+    <File>Plan.lua</File>
+  </Files>
+</Mod>

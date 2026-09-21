@@ -7,10 +7,11 @@ state into every save, the parser is checked against that dump), so every field 
 verified meaning, and every field not listed is either known to be computed by the game at
 runtime or still open.
 
-Status: the data model (`src/types.ts`) is the contract; the parser behind it is being migrated
-into this package. This README is the map of what it reads and how it was found.
+## Install and use
 
-## Usage
+```bash
+npm install civ6-savegame-parser
+```
 
 ```ts
 import { parseCiv6Save } from 'civ6-savegame-parser';
@@ -18,16 +19,38 @@ import { readFileSync } from 'fs';
 
 const game = parseCiv6Save(readFileSync('my.Civ6Save'));
 game.metadata.turn;                    // 222
-game.map.plots[i].terrain;             // 'TERRAIN_PLAINS_HILLS'
+game.map.plots[i].terrain;             // 'TERRAIN_PLAINS' (+ form 'Hill')
 game.cities[0].workedPlots;            // [{ x, y, workers }, …]
 game.players[0].favor;                 // { favor, earned, spent }
 game.players[2].revealedPlots;         // plot indices the player has revealed
 ```
 
-Everything is plain data — see [`src/types.ts`](src/types.ts) for the full `Civ6Save` model.
-Players are keyed by their slot id everywhere (62 = free cities, 63 = barbarians), database rows
-by their type string, and most records keep an `offset` into the inflated payload so a value can
-be traced back to its bytes.
+`parseCiv6Save` takes the whole file and returns a `Civ6Save` (see [`src/types.ts`](src/types.ts)).
+Everything is plain data: players keyed by their slot id (62 = free cities, 63 = barbarians),
+database rows by their type string, ×256 fixed-point converted, and most records keep an `offset`
+into the inflated payload so a value can be traced back to its bytes. The package ships compiled
+JavaScript with type declarations (`dist/`), CommonJS, Node ≥ 20.
+
+Also exported: `decompressCiv6Payload(file)` (the inflated payload) and `readOracleDump(payload)`
+(the ground-truth JSON a save carries when it was made with the oracle mod, see below).
+
+## Repository layout
+
+```
+src/types.ts          the public model
+src/model.ts          builds it from the internal parse
+src/internal/         the parsers, one file per structure (parse-*.ts), the hash formula,
+                      typed-table detection, the header store, decompression
+src/data/             the type dictionary (7 131 database types in 89 kinds) and tile hash tables
+src/vendor/           the header-only marker scan from pydt/civ6-save-parser (MIT)
+scripts/              oracle, delta, tables, annotate, types, capture (see below)
+mods/oracle, mods/lab the in-game mods; mods/SaveRE.lua a FireTuner helper; install.sh
+test/                 the tests; test/fixtures/*.Civ6Save the captures they run against
+docs/reverse-engineering.md  the working notes, in the order things were learned
+```
+
+Tests: `npm test`. The fixture saves are gitignored (17 MB); a test whose fixture is missing is
+skipped. Point `CIV6_FIXTURES` at a folder holding them, or ask for the capture set.
 
 ## What it reads
 
@@ -187,17 +210,17 @@ The approach that worked, in the order it was learned:
    saves (policy slot list becomes a table, city slots stop matching file order once a city is
    lost, player objects reorder around slots 62/63). Always re-run on the latest save.
 
-### Helpful scripts (moving here under `scripts/`)
+### Scripts
 
 | Script | What it does |
 |---|---|
-| `oracle <save> [out.json]` | Print or export the oracle dump a save carries, plus the lab and plan logs |
-| `delta --before A --after B` | Changed byte windows between two saves with nearby type references and hex |
-| `tables <save> [--kind K] [--near off]` | Census of typed tables; every table of a kind with non-zero entries; tables around an offset |
-| `annotate <save> [--near off]` | Every type reference in the payload grouped by kind and offset |
-| `types` | Rebuild `data/civ6-types.json` from the game's XML |
-| `capture --load X --name Y [--turns N] [--actions …]` | Drive a capture: write the plan, launch through Steam, wait for the saves, print the oracle |
-| Lua: `mods/oracle/` (the dump + plan runner), `mods/lab/` (scenario mutations + command file) | The in-game half; `install.sh` copies them into the game's Mods folder |
+| `npm run oracle -- <save> [out.json]` | Print or export the oracle dump a save carries, plus the lab and plan logs |
+| `npm run delta -- --before A --after B` | Changed byte windows between two saves with nearby type references and hex |
+| `npm run tables -- <save> [--kind K] [--near off]` | Census of typed tables; every table of a kind with non-zero entries; tables around an offset |
+| `npm run annotate -- <save> [--near off]` | Every type reference in the payload grouped by kind and offset |
+| `npm run types` | Rebuild `data/civ6-types.json` from the game's XML |
+| `npx tsx scripts/capture.ts --load X --name Y [--turns N] [--actions …]` | Drive a capture: write the plan, launch through Steam, wait for the saves, print the oracle |
+| `mods/oracle/` (the dump + plan runner), `mods/lab/` (scenario mutations + command file) | The in-game half; `mods/install.sh` copies them into the game's Mods folder (macOS path by default, `CIV6_MODS_ROOT` to override); enable both under Additional Content → Mods |
 
 ## File structure of a `.Civ6Save`
 
@@ -260,8 +283,6 @@ Encoding conventions seen everywhere:
 
 ## Follow-ups
 
-- Migrate the parser, `data/` (the type dictionary), the tests and the Lua mods into this
-  package behind the `Civ6Save` model above.
 - Tourism accumulators, CO2 stock, alliance type/level, deals, congress votes — see *Not read*.
 - Fog-memory arrays (the four u16 plot arrays per player after the visibility counts).
 - The AI-only regions (weights, diplomatic action state) are named but not decoded; a

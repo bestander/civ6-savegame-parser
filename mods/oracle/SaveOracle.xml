@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- An empty, hidden UI context: loading it is what makes the game run SaveOracle.lua in the
+     InGame UI context (the .lua with the context's name is loaded with it). -->
+<Context Hidden="1" />

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Mod id="c1f4a0e0-5e1e-4c6e-9d0a-5ave1ab000001" version="10">
+  <Properties>
+    <Name>Save Lab</Name>
+    <Description>Manufactures parser test scenarios on load (a wonder in production, a damaged city and unit, a war, a corps) so one save covers them all. Applied once per game; what it did is recorded in the LAB_LOG game property. Not for real games.</Description>
+    <Teaser>Scenario factory for civ6-savegame-parser</Teaser>
+    <Authors>civ6-savegame-parser</Authors>
+    <CompatibleVersions>1.2,2.0</CompatibleVersions>
+    <AffectsSavedGames>0</AffectsSavedGames>
+  </Properties>
+  <InGameActions>
+    <AddGameplayScripts id="lab_gameplay">
+      <File>SaveLab.lua</File>
+    </AddGameplayScripts>
+    <ImportFiles id="lab_cmd">
+      <File>SaveLabCmd.lua</File>
+    </ImportFiles>
+  </InGameActions>
+  <Files>
+    <File>SaveLab.lua</File>
+    <File>SaveLabCmd.lua</File>
+  </Files>
+</Mod>
