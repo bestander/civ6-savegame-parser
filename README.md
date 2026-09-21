@@ -7,8 +7,8 @@ state into every save, the parser is checked against that dump), so every field 
 verified meaning, and every field not listed is either known to be computed by the game at
 runtime or still open.
 
-Status: the code lives in the `civa` project (`server/src/civ6save`) and is being moved here. This
-README is the map of what it reads and how it was found.
+Status: the data model (`src/types.ts`) is the contract; the parser behind it is being migrated
+into this package. This README is the map of what it reads and how it was found.
 
 ## Usage
 
@@ -17,15 +17,17 @@ import { parseCiv6Save } from 'civ6-savegame-parser';
 import { readFileSync } from 'fs';
 
 const game = parseCiv6Save(readFileSync('my.Civ6Save'));
-game.header.turn;                      // 222
-game.map.tiles[i].terrain;             // { name: 'Plains', form: 'Hill' }
+game.metadata.turn;                    // 222
+game.map.plots[i].terrain;             // 'TERRAIN_PLAINS_HILLS'
 game.cities[0].workedPlots;            // [{ x, y, workers }, …]
-game.playerStates[0].favor;            // { favor, earned, spent }
-game.visibility[2].revealed;           // plot indices the player has revealed
+game.players[0].favor;                 // { favor, earned, spent }
+game.players[2].revealedPlots;         // plot indices the player has revealed
 ```
 
-Everything is plain data. Offsets into the inflated payload (`payloadOffset`) are kept on most
-records so a value can be traced back to the bytes.
+Everything is plain data — see [`src/types.ts`](src/types.ts) for the full `Civ6Save` model.
+Players are keyed by their slot id everywhere (62 = free cities, 63 = barbarians), database rows
+by their type string, and most records keep an `offset` into the inflated payload so a value can
+be traced back to its bytes.
 
 ## What it reads
 
@@ -151,7 +153,7 @@ The approach that worked, in the order it was learned:
    finds all of them in one pass (25 k in a mid-game save); `tables` prints the census. Values
    that are fractions are stored ×256.
 
-4. **The oracle: the save is its own ground truth.** A small mod (`CivaOracle`, gameplay + UI
+4. **The oracle: the save is its own ground truth.** A small mod (the *oracle*, `mods/oracle`, gameplay + UI
    context) dumps the live state as JSON into a game property on load and at every turn start
    (`Game:SetProperty`); properties are serialized into the payload, so every save made with the
    mod carries the numbers the parser must reproduce. Every field in the tables above was pinned
@@ -160,7 +162,7 @@ The approach that worked, in the order it was learned:
    one. Caveat: the dump is written when a save *completes*, so a save carries the state of the
    previous save; capture by saving twice.
 
-5. **Manufacture the scenario, don't play it.** A second mod (`CivaLab`) mutates the loaded game
+5. **Manufacture the scenario, don't play it.** A second mod (the *lab*, `mods/lab`) mutates the loaded game
    from a gameplay script (declare wars, grant units, found religions, damage walls, form corps,
    spawn a Settler next to an enemy capital for a loyalty test). A command file per capture
    makes each situation a few lines of Lua instead of hours of play.
@@ -194,8 +196,8 @@ The approach that worked, in the order it was learned:
 | `tables <save> [--kind K] [--near off]` | Census of typed tables; every table of a kind with non-zero entries; tables around an offset |
 | `annotate <save> [--near off]` | Every type reference in the payload grouped by kind and offset |
 | `types` | Rebuild `data/civ6-types.json` from the game's XML |
-| `civ6-run --load X --name Y [--turns N] [--actions …]` | Drive a capture: write the plan, launch through Steam, wait for the saves, print the oracle |
-| Lua: `CivaOracle/` (the dump + plan runner), `CivaLab/` (scenario mutations + command file) | The in-game half; `install-*.sh` copies them into the Mods folder |
+| `capture --load X --name Y [--turns N] [--actions …]` | Drive a capture: write the plan, launch through Steam, wait for the saves, print the oracle |
+| Lua: `mods/oracle/` (the dump + plan runner), `mods/lab/` (scenario mutations + command file) | The in-game half; `install.sh` copies them into the game's Mods folder |
 
 ## File structure of a `.Civ6Save`
 
@@ -258,8 +260,8 @@ Encoding conventions seen everywhere:
 
 ## Follow-ups
 
-- Move the code from `civa/server/src/civ6save` (parsers, `data/`, the vendored header parser,
-  tests and the Lua mods) here; keep the civa-specific import layer (`import/`) behind.
+- Migrate the parser, `data/` (the type dictionary), the tests and the Lua mods into this
+  package behind the `Civ6Save` model above.
 - Tourism accumulators, CO2 stock, alliance type/level, deals, congress votes — see *Not read*.
 - Fog-memory arrays (the four u16 plot arrays per player after the visibility counts).
 - The AI-only regions (weights, diplomatic action state) are named but not decoded; a
