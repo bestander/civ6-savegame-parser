@@ -1,7 +1,7 @@
 {
   "name": "civ6-savegame-parser",
-  "version": "0.1.0",
-  "description": "Reads the game state out of a Sid Meier's Civilization VI .Civ6Save file: map, cities, units, players, diplomacy, religion, eras, great works, fog of war \u2014 without the game.",
+  "version": "0.2.0",
+  "description": "Reads the game state out of a Sid Meier's Civilization VI .Civ6Save file: map, cities, units, players, diplomacy, religion, eras, great works, fog of war — without the game.",
   "license": "MIT",
   "repository": "github:bestander/civ6-savegame-parser",
   "type": "commonjs",
