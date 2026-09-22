@@ -239,6 +239,13 @@ export interface Civ6City {
 // ---------------------------------------------------------------------------------------------
 
 export interface Civ6Unit {
+    /**
+     * The game's own unit id (`unit:GetID()`), packed `(generation << 16) | index`. Unique per
+     * player and kept as the unit moves, so `(playerId, id)` follows a unit from save to save —
+     * an id is reused only after its unit dies. Null when the save's unit list could not be
+     * matched to this unit.
+     */
+    id: number | null;
     type: string;
     playerId: number;
     x: number;

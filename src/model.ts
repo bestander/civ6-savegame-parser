@@ -167,6 +167,7 @@ export function toModel(internal: Civ6SaveParsed, payload: Buffer): Civ6Save {
     });
 
     const units: Civ6Unit[] = internal.units.map(u => ({
+        id: u.id ?? null,
         type: u.typeName ?? `UNKNOWN_${u.typeHashHex}`,
         playerId: u.ownerId,
         x: u.x,

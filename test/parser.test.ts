@@ -268,6 +268,50 @@ describe('treasury, faith, pantheon, population and food', () => {
         expect(parsed.playerStates[0]).toMatchObject({ gold: 97.70703125, faith: 5.70703125, pantheon: null });
     });
 
+    it('reads each unit\'s own id, as the game reports it', () => {
+        const buf = loadSave(ORACLE_SAVE);
+        if (!buf) return;
+        const payload = decompressCiv6Payload(buf);
+        const oracle = readOracleDump(payload)!;
+        const parsed = parseCiv6Save(buf);
+
+        // Every unit the mod listed is in the save under the same id, on the same plot.
+        let compared = 0;
+        for (const op of oracle.players) {
+            for (const ou of op.units) {
+                const unit = parsed.units.find(u => u.ownerId === op.id && u.id === ou.id);
+                expect(unit, `unit ${ou.id} of player ${op.id}`).toBeDefined();
+                expect({ x: unit!.x, y: unit!.y }).toEqual({ x: ou.x, y: ou.y });
+                compared++;
+            }
+        }
+        expect(compared).toBeGreaterThan(20);
+
+        // Packed `(generation << 16) | index`: unique per owner, never zero.
+        const keys = parsed.units.filter(u => u.id !== undefined).map(u => `${u.ownerId}:${u.id}`);
+        expect(new Set(keys).size).toBe(keys.length);
+        expect(parsed.units.every(u => u.id === undefined || u.id > 0)).toBe(true);
+    });
+
+    it('keeps a unit\'s id across turns, through moves', () => {
+        const before = loadSave(fixture('duel-turn-125'));
+        const after = loadSave(fixture('duel-turn-126'));
+        if (!before || !after) return;
+        const a = parseCiv6Save(before).units, b = parseCiv6Save(after).units;
+        const byId = new Map(a.filter(u => u.id !== undefined).map(u => [`${u.ownerId}:${u.id}`, u]));
+        let matched = 0, moved = 0;
+        for (const u of b) {
+            const prev = u.id === undefined ? undefined : byId.get(`${u.ownerId}:${u.id}`);
+            if (!prev) continue;
+            // An id is only reused once its unit is gone, so a match is the same unit.
+            expect(prev.typeName).toBe(u.typeName);
+            matched++;
+            if (prev.x !== u.x || prev.y !== u.y) moved++;
+        }
+        expect(matched).toBeGreaterThan(10);
+        expect(moved).toBeGreaterThan(0);
+    });
+
     it('reads them for every player and city of the PYDT save', () => {
         const buf = loadSave(PYDT_SAVE);
         if (!buf) return;

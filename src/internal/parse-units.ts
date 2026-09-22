@@ -22,11 +22,24 @@ const BLOB_PAD = -9999;
  *   TERRAIN, FEATURE, GREAT_PERSON_CLASS ×2, then XP (u16 at PROMOTION-24), level (u16 at
  *   PROMOTION-20), PROMOTION {hash,u8} ×145, YIELD, DISTRICT, IMPROVEMENT, …
  *
- * Remaining movement is not on this blob: each player also keeps a 60-byte unit list
- * (`[…, 1, ref, x, y, owner, mp×256, domain, …]`) in the same order as the
- * blobs, which `parseUnitInstances` walks for `movesRemaining`.
+ * Neither the unit's id nor its remaining movement is on this blob: each player also keeps a
+ * 60-byte unit list (`[…, 1, index, id, x, y, owner, mp×256, domain, …]`) in the same order as
+ * the blobs, which `parseUnitInstances` walks for both.
  */
 export interface Civ6UnitInstance {
+    /**
+     * The game's own unit id — what `unit:GetID()` returns in Lua — packed as
+     * `(generation << 16) | index`, where `index` is the unit's slot in its owner's list.
+     * Unique per owner, kept as the unit moves, and reused by a later unit once this one dies,
+     * so `(ownerId, id)` identifies a unit within one game's lifetime.
+     *
+     * Verified against the oracle mod's `GetID` on oracle-8, lab-4, lab9-6 and war-a-1 (every
+     * unit agrees) and across consecutive PYDT turns (ids survive movement).
+     *
+     * Absent when the unit's list record could not be matched — a stack the plot match could
+     * not resolve.
+     */
+    id?: number;
     typeHash: number;
     typeHashHex: string;
     typeName: string | null;
@@ -80,14 +93,14 @@ const UNIT_LIST_STRIDE = 60;
 
 
 /**
- * Per-player unit list entries — the `(x, y, mp×256)` rows — in file order.
+ * Per-player unit list entries — the `(id, x, y, mp×256)` rows — in file order.
  */
-function walkUnitListRecords(payload: Buffer, mapWidth: number, mapHeight: number): Array<{ x: number; y: number; owner: number; mp: number; offset: number }> {
-    const out: Array<{ x: number; y: number; owner: number; mp: number; offset: number }> = [];
+function walkUnitListRecords(payload: Buffer, mapWidth: number, mapHeight: number): Array<{ id: number; x: number; y: number; owner: number; mp: number; offset: number }> {
+    const out: Array<{ id: number; x: number; y: number; owner: number; mp: number; offset: number }> = [];
     const end = payload.length - UNIT_LIST_STRIDE;
-    // Anchored on the plot: `[…, 1, ref, x, y, owner, mp×256, domain, …]` — the leading sentinels
-    // vary (the first record of a list has none).
-    for (let o = 8; o < end; o++) {
+    // Anchored on the plot: `[…, 1, index, id, x, y, owner, mp×256, domain, …]` — the leading
+    // sentinels vary (the first record of a list has none).
+    for (let o = 12; o < end; o++) {
         // +16 is 2 on land units and 0 on ships (a domain, presumably).
         const domain = payload.readInt32LE(o + 16);
         if (payload.readInt32LE(o - 8) !== 1 || domain < 0 || domain > 3) continue;
@@ -98,7 +111,11 @@ function walkUnitListRecords(payload: Buffer, mapWidth: number, mapHeight: numbe
         if (owner < 0 || owner > 63) continue;
         const mp = payload.readInt32LE(o + 12);
         if (mp < 0 || mp % 256 !== 0 || mp > 32 * 256) continue;
-        out.push({ x, y, owner, mp: mp / 256, offset: o });
+        // The id's low half is the index stored just before it; requiring the pair drops the
+        // run of coincidental hits this scan used to return (2254 → ~200 on a PYDT save).
+        const id = payload.readInt32LE(o - 4);
+        if (id <= 0 || (id & 0xffff) !== payload.readInt32LE(o - 12)) continue;
+        out.push({ id, x, y, owner, mp: mp / 256, offset: o });
     }
     return out;
 }
@@ -251,14 +268,15 @@ export function parseUnitInstances(
         units.push(unit);
     }
 
-    // Remaining movement: the per-player unit lists, matched by plot in file order — a stack
-    // of two units on one tile lists them in the same order as their blobs.
+    // Id and remaining movement: the per-player unit lists, matched by plot in file order — a
+    // stack of two units on one tile lists them in the same order as their blobs.
     const listRecords = walkUnitListRecords(payload, mapWidth, mapHeight);
     const used = new Set<number>();
     for (const unit of units) {
         const record = listRecords.find((r, idx) => !used.has(idx) && r.owner === unit.ownerId && r.x === unit.x && r.y === unit.y);
         if (!record) continue;
         used.add(listRecords.indexOf(record));
+        unit.id = record.id;
         unit.movesRemaining = record.mp;
     }
 
