@@ -637,6 +637,28 @@ describe('citizen assignment', () => {
         }
     });
 
+    it('adds the second array: a city whose new citizens are not in the first list (amen-53-1)', () => {
+        // Nobamba, pop 2: the first array holds only the centre, the second the two citizens
+        // placed on its 2F/2P hills. Reading the first alone had civa auto-place them on a Rice
+        // marsh and a floodplain — −3.6 Production for the Zulu on the 51–60 run (civa-iy2s).
+        const buf = loadSave(fixture('amen-53-1'));
+        if (!buf) return;
+        const parsed = parseCiv6Save(buf);
+        const dump = readOracleDump(decompressCiv6Payload(buf))!;
+        const oracleCities = dump.players.flatMap(p => p.cities) as Array<{ name: string; plots: Array<{ x: number; y: number; worked: boolean }> }>;
+        let checked = 0;
+        for (const oc of oracleCities) {
+            const city = parsed.cities.find(c => `LOC_CITY_NAME_${c.name}` === oc.name);
+            if (!city || city.playerId > 5) continue;
+            const worked = oc.plots.filter(p => p.worked).map(p => `${p.x},${p.y}`).sort();
+            expect(city.workedPlots.filter(w => oc.plots.some(p => p.x === w.x && p.y === w.y)).map(w => `${w.x},${w.y}`).sort(), city.name).toEqual(worked);
+            checked++;
+        }
+        expect(checked).toBe(25);
+        const nobamba = parsed.cities.find(c => c.name === 'NOBAMBA')!;
+        expect(nobamba.workedPlots.reduce((n, w) => n + w.workers, 0)).toBe(nobamba.population! + 1);
+    });
+
     it('is plausible on the PYDT and duel saves: centre worked, workers ≤ population', () => {
         for (const path of [PYDT_SAVE, fixture('duel-turn-126')]) {
             const buf = loadSave(path);

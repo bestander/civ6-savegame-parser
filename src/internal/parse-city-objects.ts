@@ -121,7 +121,11 @@ function findCityHeader(payload: Buffer, nameOffset: number, ownerId: number, ci
     return null;
 }
 
-/** The `37, u32×37, 37, u32×37` citizen arrays within a short stretch after the name. */
+/**
+ * The `37, u32×37, 37, u32×37` citizen arrays within a short stretch after the name.
+ * Both arrays are workers. On a full city the second is zero; on a short one it holds the
+ * citizens the first list left out, and the two together are the population plus the center.
+ */
 function findWorkers(payload: Buffer, nameOffset: number, nameLength: number): number[] | null {
     const span = 4 + 4 * CITY_RING_PLOTS;
     for (let o = nameOffset + nameLength; o + 2 * span <= payload.length && o < nameOffset + nameLength + 256; o++) {
@@ -129,6 +133,11 @@ function findWorkers(payload: Buffer, nameOffset: number, nameLength: number): n
         const counts: number[] = [];
         for (let k = 0; k < CITY_RING_PLOTS; k++) counts.push(payload.readUInt32LE(o + 4 + 4 * k));
         if (counts.some(c => c > 8)) continue;
+        for (let k = 0; k < CITY_RING_PLOTS; k++) {
+            const extra = payload.readUInt32LE(o + span + 4 + 4 * k);
+            if (extra > 8) continue;
+            counts[k] += extra;
+        }
         return counts;
     }
     return null;
