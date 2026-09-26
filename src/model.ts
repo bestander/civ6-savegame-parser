@@ -35,6 +35,7 @@ function plotOf(tile: Civ6Tile): Civ6Plot {
         pillaged: tile.pillaged,
         riverMap: tile.riverMap,
         unitCount: tile.unitCount,
+        ...(tile.yieldChanges ? { yieldChanges: { ...tile.yieldChanges } } : {}),
         owner: tile.ownership
             ? {
                 playerId: tile.ownership.ownerId,

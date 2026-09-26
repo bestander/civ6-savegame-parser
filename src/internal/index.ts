@@ -1,3 +1,4 @@
+import { parsePlotYieldChanges } from './parse-plot-yield-changes';
 import { buildCitySummaries, buildUnitStacks } from './build-cities';
 import { decompressCiv6Payload } from './decompress';
 import { parseCiv6Header } from './header-parser';
@@ -71,6 +72,10 @@ export function parseCiv6Save(buffer: Buffer): Civ6SaveParsed {
 
     const payload = decompressCiv6Payload(buffer);
     const map = parseMapTiles(payload);
+    for (const [plot, changes] of parsePlotYieldChanges(payload, map.tileCount)) {
+        const tile = map.tiles[plot];
+        if (tile) tile.yieldChanges = changes;
+    }
 
     const historyBlocks = parseCityHistory(payload);
     const locCityNames = extractLocCityNames(payload);

@@ -67,6 +67,8 @@ export interface Civ6Tile {
     unitCount: number;
     ownership?: Civ6TileOwnership;
     overlayBytes: number;
+    /** Yields a flood or an eruption added on top of terrain and feature (`YIELD_*` → amount). */
+    yieldChanges?: Record<string, number>;
     /** Where the record starts in the inflated payload, and how long it is (RE aid). */
     payloadOffset?: number;
     recordLength?: number;

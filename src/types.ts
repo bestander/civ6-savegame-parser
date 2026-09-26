@@ -159,6 +159,12 @@ export interface Civ6Plot {
     /** Bit mask of river edges as the game stores it. */
     riverMap: number;
     unitCount: number;
+    /**
+     * Yields a flood or an eruption left on the tile, on top of terrain, feature, resource and
+     * improvement (`YIELD_*` → amount). Absent when there are none. Gathering Storm rolls these
+     * per tile, so two Volcanic Soil hexes side by side can differ.
+     */
+    yieldChanges?: Record<string, number>;
     owner: {
         playerId: number;
         /** The owning city's slot in its owner's list (`Civ6City.slot`). */
