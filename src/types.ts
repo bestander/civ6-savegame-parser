@@ -62,6 +62,10 @@ export interface Civ6Player {
     techsBoosted: string[];
     /** Science banked per tech in progress. */
     techProgress: Record<string, number>;
+    /** Science past the last completed tech, paid into the next research on the following turn. */
+    scienceOverflow: number;
+    /** Culture past the last completed civic, paid the same way. */
+    cultureOverflow: number;
     currentResearch: string | null;
     civicsCompleted: string[];
     civicsInspired: string[];

@@ -44,6 +44,15 @@ export interface Civ6PlayerState {
     civicsCompleted: string[];
     civicsInspired: string[];
     civicProgress: Record<string, number>;
+    /**
+     * Science carried past the last completed tech, not yet applied: Civ6 banks a completion's
+     * overflow and pays it into the next research on the following turn. Just ahead of the
+     * researched-techs table: `u32 n, n × tech hash (current research first), i32 overflow×256,
+     * 0, 0, u32 techCount`. 51–60 hotseat run: Greece 7.0078125 on save 58 after Sailing.
+     */
+    scienceOverflow: number;
+    /** The civics twin, right after the civic-progress table: `u32 n, n × civic hash, i32 overflow×256`. */
+    cultureOverflow: number;
     currentCivic: string | null;
     /** `GOVERNMENT_*` in place. */
     government: string | null;
@@ -229,6 +238,17 @@ const scaled = (t: TypedTable | undefined, scale: number) =>
  * Every player object, in player-id order. `tables` may be passed in when the caller already
  * ran the census (it is the expensive step); otherwise it is computed here.
  */
+/** `u32 n, n × civic hash, i32 overflow×256` at the end of the civic-progress table; 0 when the shape is not there. */
+function civicOverflow(payload: Buffer, civicEnd: number): number {
+    if (civicEnd <= 0 || civicEnd + 8 > payload.length) return 0;
+    const n = payload.readUInt32LE(civicEnd);
+    if (n < 1 || n > 8 || civicEnd + 4 + 4 * n + 4 > payload.length) return 0;
+    for (let k = 0; k < n; k++) {
+        if (typeAt(payload, civicEnd + 4 + 4 * k, 'KIND_CIVIC') === null) return 0;
+    }
+    return payload.readInt32LE(civicEnd + 4 + 4 * n) / 256;
+}
+
 export function parsePlayerStates(payload: Buffer, tables?: TypedTable[]): Civ6PlayerState[] {
     const all = tables ?? detectTypedTables(payload, { minEntries: 4 });
     const players: Civ6PlayerState[] = [];
@@ -297,6 +317,8 @@ export function parsePlayerStates(payload: Buffer, tables?: TypedTable[]): Civ6P
             techsResearched: names(researched),
             techsBoosted: names(boosted),
             techProgress: scaled(progress, 256),
+            scienceOverflow: payload.readInt32LE(researched.start - 16) / 256,
+            cultureOverflow: civicsOk ? civicOverflow(payload, civicEnd) : 0,
             currentResearch: typeAt(payload, researched.start - 20, 'KIND_TECH'),
             civicsCompleted: civicsOk ? names(civicsCompleted) : [],
             civicsInspired: civicsOk ? names(civicsInspired) : [],

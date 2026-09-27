@@ -103,6 +103,8 @@ export function toModel(internal: Civ6SaveParsed, payload: Buffer): Civ6Save {
             techsResearched: state.techsResearched,
             techsBoosted: state.techsBoosted,
             techProgress: state.techProgress,
+            scienceOverflow: state.scienceOverflow,
+            cultureOverflow: state.cultureOverflow,
             currentResearch: state.currentResearch,
             civicsCompleted: state.civicsCompleted,
             civicsInspired: state.civicsInspired,

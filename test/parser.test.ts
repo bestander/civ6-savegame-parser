@@ -460,6 +460,20 @@ describe('great people', () => {
     });
 });
 
+describe('research and civic overflow', () => {
+    it('reads the science and culture carried past a completion (hotseat-58)', () => {
+        // Greece finished Sailing at 57.01 against 50 and carries 7.0078125; Poland finished Early
+        // Empire and carries 5.140625 into State Workforce. Both land on the next turn.
+        const buf = loadSave(fixture('hotseat-58'));
+        if (!buf) return;
+        const players = parseCiv6Save(buf).playerStates;
+        expect(players[0]!.scienceOverflow).toBe(7.0078125);
+        expect(players[2]!.cultureOverflow).toBe(5.140625);
+        expect(players[1]!.scienceOverflow).toBe(0);
+        expect(players[1]!.cultureOverflow).toBe(0);
+    });
+});
+
 describe('governors', () => {
     it('reads whether an assigned governor is established (hotseat-58)', () => {
         // Poland's Pingala went to Wroclaw on turn 58 and is establishing; Australia's Pingala,
