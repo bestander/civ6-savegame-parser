@@ -14,6 +14,8 @@ export interface Civ6SaveMetadata {
     gameSpeed: string;
     mapSize: string;
     mapFile?: string;
+    /** `GAMEMODE_TREE_RANDOMIZER`, … — see `parseGameModes`. */
+    gameModes: string[];
 }
 
 export type Civ6SeatKind = 'full_civ' | 'city_state' | 'barbarian' | 'free_cities' | 'inactive_city_state';

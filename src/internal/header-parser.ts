@@ -65,12 +65,55 @@ function mapActors(actors: PydtActor[]): Civ6PlayerSeat[] {
         .filter((s): s is Civ6PlayerSeat => s !== null);
 }
 
+/**
+ * Game modes the save was started with (`GAMEMODE_TREE_RANDOMIZER`, `GAMEMODE_BARBARIAN_CLANS`, …).
+ *
+ * The header carries a JSON object right after the game speed, `{ "modes": [ { "name": "<json>" } ] }`,
+ * each name itself a JSON object of localized titles keyed `LOC_GAMEMODE_<MODE>_NAME`. The 51–60
+ * hotseat run lists Barbarian Clans, Monopolies and Corporations, and Tech and Civic Shuffle. `[]`
+ * for a save without the block (no modes, or a build that does not write it).
+ */
+export function parseGameModes(buffer: Buffer): string[] {
+    const head = buffer.subarray(0, Math.min(buffer.length, 64 * 1024)).toString('utf8');
+    const key = head.indexOf('"modes"');
+    if (key < 0) return [];
+    const open = head.lastIndexOf('{', key);
+    if (open < 0) return [];
+    let depth = 0;
+    let inString = false;
+    for (let i = open; i < head.length; i++) {
+        const ch = head[i]!;
+        if (inString) {
+            if (ch === '\\') i++;
+            else if (ch === '"') inString = false;
+            continue;
+        }
+        if (ch === '"') inString = true;
+        else if (ch === '{') depth++;
+        else if (ch === '}' && --depth === 0) {
+            try {
+                const block = JSON.parse(head.slice(open, i + 1)) as { modes?: Array<{ name?: string }> };
+                const out: string[] = [];
+                for (const mode of block.modes ?? []) {
+                    const match = /LOC_(GAMEMODE_[A-Z0-9_]+?)_NAME/.exec(mode.name ?? '');
+                    if (match && !out.includes(match[1]!)) out.push(match[1]!);
+                }
+                return out;
+            } catch {
+                return [];
+            }
+        }
+    }
+    return [];
+}
+
 export function parseCiv6Header(buffer: Buffer): {
     metadata: {
         turn: number;
         gameSpeed: string;
         mapSize: string;
         mapFile?: string;
+        gameModes: string[];
     };
     fullCivs: Civ6PlayerSeat[];
     cityStates: Civ6PlayerSeat[];
@@ -107,7 +150,7 @@ export function parseCiv6Header(buffer: Buffer): {
     }
 
     return {
-        metadata: { turn, gameSpeed, mapSize, mapFile },
+        metadata: { turn, gameSpeed, mapSize, mapFile, gameModes: parseGameModes(buffer) },
         fullCivs,
         cityStates,
         other,

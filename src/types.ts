@@ -36,6 +36,11 @@ export interface Civ6Metadata {
     gameSpeed: string;
     mapSize: string;
     mapScript?: string;
+    /**
+     * Game modes the game was started with: `GAMEMODE_TREE_RANDOMIZER` (Tech and Civic Shuffle —
+     * the drawn tree and costs are not in the save), `GAMEMODE_BARBARIAN_CLANS`, … `[]` when none.
+     */
+    gameModes: string[];
     /** Slot ids whose turn it is (several in hotseat). */
     currentPlayers: number[];
 }

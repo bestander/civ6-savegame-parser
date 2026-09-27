@@ -77,6 +77,7 @@ export function toModel(internal: Civ6SaveParsed, payload: Buffer): Civ6Save {
         turn: internal.metadata.turn,
         gameSpeed: internal.metadata.gameSpeed,
         mapSize: internal.metadata.mapSize,
+        gameModes: internal.metadata.gameModes ?? [],
         ...(internal.metadata.mapFile ? { mapScript: internal.metadata.mapFile } : {}),
         currentPlayers: [...slotsById.entries()].filter(([, slot]) => seatByCiv.get(slot['CIVILIZATION_TYPE_NAME'] as string)?.isCurrentTurn).map(([id]) => id),
     };
