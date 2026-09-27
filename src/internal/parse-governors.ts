@@ -11,6 +11,10 @@
  * (lab8-5: Titus in Cairo `65536`, Moksha unassigned `-1`; PYDT: Moksha in Nobamba `131073`,
  * Pingala in Canberra; the turn-125 Ambassador in Babylon, a city-state's city). The int after
  * those is 1 for some players and 0 for others (not the establishment state) and is left alone.
+ *
+ * The tenth int after the name is the establishment flag: 1 for a governor in post, 0 while it is
+ * still establishing. 51–60 hotseat run: Poland's Pingala, assigned to Wroclaw on turn 58, reads
+ * 0 on 58–60; Greece's Magnus, Zulu's Moksha and Australia's Pingala, long in post, read 1.
  */
 
 import { resolveTypeHash } from './hash-tables';
@@ -27,6 +31,8 @@ export interface Civ6Governor {
     cityOwnerId: number | null;
     /** Id of the assigned city in that owner's list (the city header's id), or null when unassigned. */
     cityId: number | null;
+    /** In post — false while still establishing; null when unassigned. */
+    established: boolean | null;
     payloadOffset: number;
 }
 
@@ -50,6 +56,7 @@ export function parseGovernors(payload: Buffer, players: Civ6PlayerState[], tabl
                 promotions: flags ? activeEntries(flags).map(e => e.name) : [],
                 cityOwnerId: cityId === -1 ? null : payload.readInt32LE(after) & 0xffff,
                 cityId: cityId === -1 ? null : cityId,
+                established: cityId === -1 ? null : payload.readInt32LE(after + 36) === 1,
                 payloadOffset: at - 8,
             });
         }

@@ -461,6 +461,19 @@ describe('great people', () => {
 });
 
 describe('governors', () => {
+    it('reads whether an assigned governor is established (hotseat-58)', () => {
+        // Poland's Pingala went to Wroclaw on turn 58 and is establishing; Australia's Pingala,
+        // Greece's Magnus and Zulu's Moksha have long been in post.
+        const buf = loadSave(fixture('hotseat-58'));
+        if (!buf) return;
+        const parsed = parseCiv6Save(buf);
+        const of = (owner: number, type: string) => parsed.governors.find(g => g.governor === type && g.cityOwnerId === owner);
+        expect(of(2, 'GOVERNOR_THE_EDUCATOR')?.established).toBe(false);
+        expect(of(4, 'GOVERNOR_THE_EDUCATOR')?.established).toBe(true);
+        expect(of(0, 'GOVERNOR_THE_RESOURCE_MANAGER')?.established).toBe(true);
+        expect(of(1, 'GOVERNOR_THE_CARDINAL')?.established).toBe(true);
+    });
+
     it('reads each appointed governor with its promotions', () => {
         const buf = loadSave(PYDT_SAVE);
         if (!buf) return;

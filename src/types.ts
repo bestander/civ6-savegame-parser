@@ -133,6 +133,7 @@ export interface Civ6Governor {
     promotions: string[];
     /** The city the governor is assigned to, by city id, or null when unassigned. */
     cityId: number | null;
+    /** False while the governor is still establishing in its city; absent when unassigned. */
     established?: boolean;
 }
 

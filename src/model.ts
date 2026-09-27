@@ -133,7 +133,7 @@ export function toModel(internal: Civ6SaveParsed, payload: Buffer): Civ6Save {
             unitsTrained: state.unitsTrained,
             relations: (diplomacy?.relations ?? []).map(r => ({ playerId: r.other, state: r.state })),
             envoys: diplomacy?.envoys ?? {},
-            governors: internal.governors.filter(g => g.playerIndex === index).map(g => ({ type: g.governor, promotions: g.promotions, cityId: g.cityId })),
+            governors: internal.governors.filter(g => g.playerIndex === index).map(g => ({ type: g.governor, promotions: g.promotions, cityId: g.cityId, ...(g.established != null ? { established: g.established } : {}) })),
             offset: state.payloadOffset,
         };
     });
