@@ -138,6 +138,7 @@ export function parseCiv6Save(buffer: Buffer): Civ6SaveParsed {
         city.buildingPlots = Object.fromEntries(obj.buildings.map(b => [b.building, { x: b.plot % map.width, y: Math.floor(b.plot / map.width) }]));
         city.population = obj.population;
         city.workedPlots = obj.workedPlots;
+        city.projectYields = obj.projectYields;
         city.loyalty = obj.loyalty;
         city.greatWorkSlots = parseCityGreatWorkSlots(payload, obj.payloadOffset, 23500);
         if (obj.center) city.center = obj.center;

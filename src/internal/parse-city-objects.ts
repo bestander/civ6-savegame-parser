@@ -77,6 +77,14 @@ export interface Civ6CityObject {
     /** The worked plots (Civ6 offset coordinates) from `workers`; empty when not found. */
     workedPlots: Array<{ x: number; y: number; workers: number }>;
     /**
+     * What a district project pays next turn (Holy Site Prayers, Campus Research Grant, …): Civ6
+     * converts a share of the hammers the project took and pays it the turn after. Ahead of the
+     * city name sits a run of thirteen six-yield tables (`6, (yield hash, amount×256) × 6`, 52
+     * bytes apart); the twelfth holds it. 51–60 hotseat run: Ulundi on Holy Site Prayers reads
+     * Faith 2.2265625 on save 56 (15 hammers × 38/256) and 1.484375 on 57. Non-zero yields only.
+     */
+    projectYields: Record<string, number>;
+    /**
      * Loyalty: `14, loyalty×256, perTurn×256, 0, 1, 3, -1, …, LOYALTY_LEVEL_n` late
      * in the object, found by the level hash (Sanaa, founded four tiles from Pella on loy-c:
      * 54 and −23 as the oracle says; the turn-126 duel's captured Buenos Aires 98.36/−1.64).
@@ -141,6 +149,37 @@ function findWorkers(payload: Buffer, nameOffset: number, nameLength: number): n
         return counts;
     }
     return null;
+}
+
+const YIELD_NAMES = ['YIELD_FOOD', 'YIELD_PRODUCTION', 'YIELD_GOLD', 'YIELD_SCIENCE', 'YIELD_CULTURE', 'YIELD_FAITH'] as const;
+const YIELD_TABLE_STRIDE = 52;
+const YIELD_TABLE_RUN = 13;
+const PROJECT_YIELD_TABLE = 11;
+
+/** A `6, (yield hash, amount×256) × 6` table at `at`, or null. */
+function yieldTableAt(payload: Buffer, at: number): Record<string, number> | null {
+    if (at < 0 || at + YIELD_TABLE_STRIDE > payload.length || payload.readUInt32LE(at) !== 6) return null;
+    const out: Record<string, number> = {};
+    for (let k = 0; k < 6; k++) {
+        const name = resolveTypeHash(payload.readUInt32LE(at + 4 + 8 * k))?.name;
+        if (name !== YIELD_NAMES[k]) return null;
+        out[name] = payload.readInt32LE(at + 8 + 8 * k) / 256;
+    }
+    return out;
+}
+
+/** The pending district-project yields: the twelfth table of the run of thirteen before the name. */
+function findProjectYields(payload: Buffer, nameOffset: number): Record<string, number> {
+    for (let start = nameOffset - YIELD_TABLE_STRIDE * YIELD_TABLE_RUN - 64; start > nameOffset - 2600 && start >= 0; start--) {
+        let ok = true;
+        for (let k = 0; k < YIELD_TABLE_RUN && ok; k++) ok = yieldTableAt(payload, start + k * YIELD_TABLE_STRIDE) !== null;
+        if (!ok) continue;
+        // The run must end there: a fourteenth table right after would mean we are inside a longer one.
+        if (yieldTableAt(payload, start + YIELD_TABLE_RUN * YIELD_TABLE_STRIDE) !== null) continue;
+        const table = yieldTableAt(payload, start + PROJECT_YIELD_TABLE * YIELD_TABLE_STRIDE)!;
+        return Object.fromEntries(Object.entries(table).filter(([, v]) => v !== 0));
+    }
+    return {};
 }
 
 function readName(payload: Buffer, at: number): string | null {
@@ -284,6 +323,7 @@ export function parseCityObjects(
             population: header === null ? null : payload.readInt32LE(header + 32),
             ...(header === null ? {} : { center: { x: payload.readInt32LE(header + 4), y: payload.readInt32LE(header + 8) }, id: payload.readInt32LE(header) }),
             food, workers, workedPlots, loyalty,
+            projectYields: findProjectYields(payload, nameOffset),
             religions, majorityReligion,
             originalOwnerId: header === null ? null : payload.readInt32LE(header + 16),
             payloadOffset: nameOffset,

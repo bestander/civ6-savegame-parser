@@ -224,6 +224,11 @@ export interface Civ6City {
     food: number;
     /** Plots worked by citizens, the centre included; a district plot with workers holds specialists. */
     workedPlots: Array<{ x: number; y: number; workers: number }>;
+    /**
+     * What a district project pays next turn (Holy Site Prayers → Faith, …): Civ6 converts a share
+     * of the hammers the project took and pays it on the following turn. Non-zero yields only.
+     */
+    projectYields: Record<string, number>;
     /** Loyalty (Rise & Fall); null without the expansion. */
     loyalty: { loyalty: number; perTurn: number; level: string | null } | null;
 

@@ -86,6 +86,7 @@ export function buildCitySummaries(
             population: null,
             food: null,
             workedPlots: [],
+            projectYields: {},
             loyalty: null,
             greatWorkSlots: [],
             religions: [],

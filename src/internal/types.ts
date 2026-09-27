@@ -160,6 +160,8 @@ export interface Civ6CitySummary {
      * with workers = specialists); empty when the citizen arrays were not found.
      */
     workedPlots: Array<{ x: number; y: number; workers: number }>;
+    /** What a district project pays next turn, by yield (non-zero only). */
+    projectYields: Record<string, number>;
     /** Loyalty, its per-turn change and the level (`LOYALTY_LEVEL_3` = full); null when not found. */
     loyalty: { loyalty: number; perTurn: number; level: string | null } | null;
     /** Great-work slots of the city's buildings with the work index held (null = empty). */

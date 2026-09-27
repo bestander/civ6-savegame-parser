@@ -460,6 +460,19 @@ describe('great people', () => {
     });
 });
 
+describe('district project yields', () => {
+    it('reads the faith Holy Site Prayers pays next turn, and nothing for other cities (hotseat-56)', () => {
+        // Ulundi's project took 15 hammers (10 + the Shrine's 5 overflow): 15 × 38/256 Faith.
+        const buf = loadSave(fixture('hotseat-56'));
+        if (!buf) return;
+        const cities = parseCiv6Save(buf).cities;
+        expect(cities.find(c => c.name === 'ULUNDI')!.projectYields).toEqual({ YIELD_FAITH: 2.2265625 });
+        expect(cities.find(c => c.name === 'NOBAMBA')!.projectYields).toEqual({});
+        expect(cities.find(c => c.name === 'SPARTA')!.projectYields).toEqual({});
+        expect(cities.filter(c => Object.keys(c.projectYields).length > 0).map(c => c.name)).toEqual(['ULUNDI']);
+    });
+});
+
 describe('research and civic overflow', () => {
     it('reads the science and culture carried past a completion (hotseat-58)', () => {
         // Greece finished Sailing at 57.01 against 50 and carries 7.0078125; Poland finished Early

@@ -153,6 +153,7 @@ export function toModel(internal: Civ6SaveParsed, payload: Buffer): Civ6Save {
             population: c.population ?? 0,
             food: c.food ?? 0,
             workedPlots: c.workedPlots,
+            projectYields: c.projectYields,
             loyalty: c.loyalty,
             production: {
                 current: c.currentProduction,
