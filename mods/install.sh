@@ -3,9 +3,11 @@
 set -e
 SRC="$(cd "$(dirname "$0")" && pwd)"
 MODS="${CIV6_MODS_ROOT:-$HOME/Library/Application Support/Sid Meier's Civilization VI/Sid Meier's Civilization VI/Mods}"
-mkdir -p "$MODS/SaveOracle" "$MODS/SaveLab"
+mkdir -p "$MODS/SaveOracle" "$MODS/SaveLab" "$MODS/CivaTree"
 cp "$SRC/oracle/SaveOracle.modinfo" "$SRC/oracle/SaveOracle.lua" "$SRC/oracle/SaveOracle.xml" "$MODS/SaveOracle/"
 cp "$SRC/lab/SaveLab.modinfo" "$SRC/lab/SaveLab.lua" "$MODS/SaveLab/"
+# The player-facing one (civa-2hw4): UI only, writes a shuffled tree into the save.
+cp "$SRC/civatree/CivaTree.modinfo" "$SRC/civatree/CivaTree.lua" "$SRC/civatree/CivaTree.xml" "$MODS/CivaTree/"
 # The plan and command files are written per capture; only seed them when missing.
 [ -f "$MODS/SaveOracle/Plan.lua" ] || cp "$SRC/oracle/Plan.lua" "$MODS/SaveOracle/"
 [ -f "$MODS/SaveLab/SaveLabCmd.lua" ] || cp "$SRC/lab/SaveLabCmd.lua" "$MODS/SaveLab/"

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Mod id="c1f4a0e0-5e1e-4c6e-9d0a-civatree00001" version="1">
+  <Properties>
+    <Name>Civa Tree</Name>
+    <Description>Writes this game's Tech and Civic Shuffle draw (prerequisites and costs) into the save so civa can read it. UI only; changes nothing in the game and does not need to be installed by the other players.</Description>
+    <Teaser>Shuffled tree for civa</Teaser>
+    <Authors>civa</Authors>
+    <CompatibleVersions>1.2,2.0</CompatibleVersions>
+    <AffectsSavedGames>0</AffectsSavedGames>
+  </Properties>
+  <InGameActions>
+    <AddUserInterfaces id="civa_tree_ui">
+      <Properties>
+        <Context>InGame</Context>
+      </Properties>
+      <File>CivaTree.xml</File>
+    </AddUserInterfaces>
+  </InGameActions>
+  <Files>
+    <File>CivaTree.xml</File>
+    <File>CivaTree.lua</File>
+  </Files>
+</Mod>
