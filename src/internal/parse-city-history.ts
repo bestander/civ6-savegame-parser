@@ -76,12 +76,11 @@ export function parseCityHistory(payload: Buffer): Civ6CityHistoryEvent[][] {
     return blocks;
 }
 
-export function extractLocCityNames(payload: Buffer): string[] {
+export function extractLocCityNames(decodedPayload: string): string[] {
     const names = new Set<string>();
     const re = /LOC_CITY_NAME_[A-Z0-9_]+/g;
-    const text = payload.toString('latin1');
     let m: RegExpExecArray | null;
-    while ((m = re.exec(text)) !== null) {
+    while ((m = re.exec(decodedPayload)) !== null) {
         names.add(m[0].replace('LOC_CITY_NAME_', ''));
     }
     return [...names].sort();

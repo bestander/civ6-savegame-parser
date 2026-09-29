@@ -8,8 +8,7 @@ const TECH_NAME_RE = /LOC_TECH_[A-Z0-9_]+_NAME/g;
 const CIVIC_NAME_RE = /LOC_CIVIC_[A-Z0-9_]+_NAME/g;
 const NOTIF_RE = /LOC_NOTIFICATION_[A-Z0-9_]+/g;
 
-function uniqueMatches(payload: Buffer, re: RegExp): string[] {
-    const text = payload.toString('latin1');
+function uniqueMatches(text: string, re: RegExp): string[] {
     const found = text.match(re) ?? [];
     return [...new Set(found)].sort();
 }
@@ -22,11 +21,11 @@ export interface Civ6SaveAsciiHints {
     notifications: string[];
 }
 
-export function parseAsciiHints(payload: Buffer): Civ6SaveAsciiHints {
+export function parseAsciiHints(decodedPayload: string): Civ6SaveAsciiHints {
     return {
-        modifiers: uniqueMatches(payload, MODIFIER_RE),
-        techNames: uniqueMatches(payload, TECH_NAME_RE),
-        civicNames: uniqueMatches(payload, CIVIC_NAME_RE),
-        notifications: uniqueMatches(payload, NOTIF_RE),
+        modifiers: uniqueMatches(decodedPayload, MODIFIER_RE),
+        techNames: uniqueMatches(decodedPayload, TECH_NAME_RE),
+        civicNames: uniqueMatches(decodedPayload, CIVIC_NAME_RE),
+        notifications: uniqueMatches(decodedPayload, NOTIF_RE),
     };
 }

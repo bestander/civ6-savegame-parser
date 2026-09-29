@@ -71,6 +71,8 @@ export function parseCiv6Save(buffer: Buffer): Civ6SaveParsed {
     const headerStore = parseHeaderStore(buffer);
 
     const payload = decompressCiv6Payload(buffer);
+    // Decode payload to latin1 once and pass through to consumers
+    const decodedPayload = payload.toString('latin1');
     const map = parseMapTiles(payload);
     for (const [plot, changes] of parsePlotYieldChanges(payload, map.tileCount)) {
         const tile = map.tiles[plot];
@@ -78,7 +80,7 @@ export function parseCiv6Save(buffer: Buffer): Civ6SaveParsed {
     }
 
     const historyBlocks = parseCityHistory(payload);
-    const locCityNames = extractLocCityNames(payload);
+    const locCityNames = extractLocCityNames(decodedPayload);
     const cityYieldTimelines = parseCityYieldTimelines(payload);
     const playerTimelines = parsePlayerTimelines(payload, header.fullCivs.length);
 
@@ -160,7 +162,7 @@ export function parseCiv6Save(buffer: Buffer): Civ6SaveParsed {
             city.districts.push({ type: d.type, x: d.x, y: d.y, completed: d.completed, damage: d.damage, wallsDamage: d.wallsDamage });
         }
     }
-    const asciiHints = parseAsciiHints(payload);
+    const asciiHints = parseAsciiHints(decodedPayload);
 
     const unmappedHashes = collectUnmappedHashes(map.tiles);
     unmappedHashes.instanceTypes = unmappedTypeHashes;
