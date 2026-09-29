@@ -8,6 +8,6 @@ export * from './types';
 export { parseCiv6Save } from './model';
 export { decompressCiv6Payload } from './internal/decompress';
 export { readOracleDump, readLabLog, readPlanLog } from './internal/oracle';
-export { readTreeDump, parseTreeText } from './internal/tree-dump';
+export { readTreeDump, readTreeDumpFromHeaderStore, parseTreeText } from './internal/tree-dump';
 export type { Civ6TreeDump, Civ6TreeItem } from './internal/tree-dump';
 export type { OracleDump } from './internal/oracle';

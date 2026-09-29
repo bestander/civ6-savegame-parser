@@ -268,4 +268,6 @@ export interface Civ6SaveParsed {
     warnings: string[];
     /** The inflated payload the offsets refer to. */
     payload: Buffer;
+    /** The Civa Tree mod's dump (shuffled tech/civic tree and costs) when the save carries one. */
+    shuffledTree?: import('./tree-dump').Civ6TreeDump;
 }

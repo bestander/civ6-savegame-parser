@@ -23,7 +23,9 @@ import { parseCityGreatWorkSlots, parseGreatWorkRegistry } from './parse-great-w
 import { parseEmergencies, parseResolutions } from './parse-congress';
 import { parseAlliances, parseDealItems } from './parse-alliances';
 import { detectTypedTables } from './typed-tables';
+import { readTreeDumpFromHeaderStore } from './tree-dump';
 import type { Civ6SaveParsed } from './types';
+import type { Civ6TreeDump } from './tree-dump';
 
 export type {
     Civ6CityHistoryEvent,
@@ -187,6 +189,15 @@ export function parseCiv6Save(buffer: Buffer): Civ6SaveParsed {
         );
     }
 
+    // Read the tree dump from the already-parsed header store (same pass, no re-parsing)
+    let shuffledTree: Civ6TreeDump | undefined;
+    try {
+        const treeDump = readTreeDumpFromHeaderStore(headerStore);
+        if (treeDump) shuffledTree = treeDump;
+    } catch {
+        // Silently ignore tree dump read errors; it's optional
+    }
+
     return {
         metadata: header.metadata,
         header: headerStore,
@@ -223,5 +234,6 @@ export function parseCiv6Save(buffer: Buffer): Civ6SaveParsed {
         },
         warnings,
         payload,
+        ...(shuffledTree !== undefined && { shuffledTree }),
     };
 }

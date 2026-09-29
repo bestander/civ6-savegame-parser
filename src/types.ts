@@ -15,6 +15,8 @@
  * - `offset` fields point into the inflated payload so a value can be traced to its bytes.
  */
 
+import type { Civ6TreeDump } from './internal/tree-dump';
+
 // ---------------------------------------------------------------------------------------------
 // Header
 // ---------------------------------------------------------------------------------------------
@@ -407,6 +409,8 @@ export interface Civ6Save {
      * counters are sparse (only turns with an event).
      */
     graphs: Record<string, Record<number, Civ6TimelinePoint[]>>;
+    /** The Civa Tree mod's dump (shuffled tech/civic tree and costs) when the save carries one. */
+    shuffledTree?: Civ6TreeDump;
     /** Anything the parser could not resolve, human-readable. */
     warnings: string[];
 }

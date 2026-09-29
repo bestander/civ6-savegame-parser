@@ -56,7 +56,12 @@ function playerKind(playerId: number, slot: Record<string, HeaderValue> | undefi
     return 'civilization';
 }
 
+/**
+ * Build the public Civ6Save model from the internal parse result.
+ * Extracts the shuffledTree from internal if present and includes it in the result.
+ */
 export function toModel(internal: Civ6SaveParsed, payload: Buffer): Civ6Save {
+    const { shuffledTree, ...internalWithoutTree } = internal;
     // The header lists every slot twice (a configuration block and a mostly empty one); keep the fuller record.
     const slotsById = new Map<number, Record<string, HeaderValue>>();
     for (const slot of internal.header.players) {
@@ -220,6 +225,7 @@ export function toModel(internal: Civ6SaveParsed, payload: Buffer): Civ6Save {
         alliances: internal.alliances ? internal.alliances.map(({ payloadOffset: _o, ...a }) => a) : null,
         deals: internal.dealItems.map(({ payloadOffset: _o, ...d }) => d),
         graphs: internal.graphs,
+        ...(shuffledTree !== undefined && { shuffledTree }),
         warnings: internal.warnings,
     };
 }

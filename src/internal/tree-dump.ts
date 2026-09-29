@@ -11,6 +11,7 @@
 
 import { civ6Hash } from './hash-tables';
 import { parseHeaderStore } from './header-store';
+import type { Civ6HeaderStore } from './header-store';
 
 export interface Civ6TreeItem {
     type: string;
@@ -50,9 +51,8 @@ export function parseTreeText(text: string): Civ6TreeDump | null {
 
 const hex = (key: string) => (civ6Hash(key) >>> 0).toString(16).padStart(8, '0');
 
-/** The mod's dump in a save's header, or null for a save made without the mod. */
-export function readTreeDump(buffer: Buffer): Civ6TreeDump | null {
-    const store = parseHeaderStore(buffer);
+/** Read the mod's dump from an already-parsed header store, or null for a save made without the mod. */
+export function readTreeDumpFromHeaderStore(store: Civ6HeaderStore): Civ6TreeDump | null {
     const maps = [store.game, ...store.players];
     const get = (key: string) => {
         const label = hex(key);
@@ -68,4 +68,10 @@ export function readTreeDump(buffer: Buffer): Civ6TreeDump | null {
         text += chunk;
     }
     return parseTreeText(text);
+}
+
+/** The mod's dump in a save's header, or null for a save made without the mod. */
+export function readTreeDump(buffer: Buffer): Civ6TreeDump | null {
+    const store = parseHeaderStore(buffer);
+    return readTreeDumpFromHeaderStore(store);
 }
