@@ -29,7 +29,7 @@
 
 import { cityRingPlots, CITY_RING_PLOTS } from './city-plot-ring';
 import { resolveTypeHash } from './hash-tables';
-import { detectTypedTables, type TypedTable } from './typed-tables';
+import { activeEntries, allEntries, detectTypedTables, tableInt, type TypedTable } from './typed-tables';
 
 export interface Civ6CityObject {
     /** `LOC_CITY_NAME_SPARTA` → `SPARTA`. */
@@ -245,8 +245,8 @@ export function parseCityObjects(
         const productionProgress: Record<string, number> = {};
         for (const t of tables) {
             if (t.stride !== 8 || !PRODUCTION_KINDS.has(t.kind)) continue;
-            const set = t.entries.filter(e => e.int !== 0);
-            if (set.length === 0 || set.length > t.entries.length / 4) continue;
+            const set = activeEntries(payload, t).filter(e => e.int !== 0);
+            if (set.length === 0 || set.length > t.count / 4) continue;
             for (const e of set) {
                 // Below one hammer it is an AI weight (whole rows of 128), not progress.
                 if (e.int >= 256 && e.int < 100_000 * 256) productionProgress[e.name] = e.int / 256;
@@ -254,13 +254,16 @@ export function parseCityObjects(
         }
 
         const queueTable = tables.find(t => t.stride === 12 && PRODUCTION_KINDS.has(t.kind));
-        const productionQueue = queueTable ? queueTable.entries.map(e => e.name) : [];
+        const productionQueue = queueTable ? activeEntries(payload, queueTable).map(e => e.name) : [];
 
         const buildingPlotTables = tables.filter(t => t.kind === 'KIND_BUILDING' && t.stride === 6);
         // A wonder in production has its plot in the first table (lab-4: the Pyramids, 40% along).
         if (!productionPlot && currentProduction && options.mapWidth) {
-            const target = buildingPlotTables[0]?.entries.find(e => e.name === currentProduction);
-            if (target && target.int !== NO_PLOT) productionPlot = { x: target.int % options.mapWidth, y: Math.floor(target.int / options.mapWidth) };
+            const firstTable = buildingPlotTables[0];
+            if (firstTable) {
+                const target = activeEntries(payload, firstTable).find(e => e.name === currentProduction);
+                if (target && target.int !== NO_PLOT) productionPlot = { x: target.int % options.mapWidth, y: Math.floor(target.int / options.mapWidth) };
+            }
         }
         // The tiles are keyed by the city's slot in its owner's list (the header id's low half),
         // which is its file position only while the owner never lost a city.
@@ -268,7 +271,7 @@ export function parseCityObjects(
         const slot = header0 === null ? cityIndex : payload.readInt32LE(header0) & 0xffff;
         const buildings: Array<{ building: string; plot: number }> = [];
         for (const t of buildingPlotTables.slice(1)) {
-            for (const e of t.entries) {
+            for (const e of allEntries(payload, t)) {
                 if (e.int === NO_PLOT || e.int === 0) continue;
                 if (options.plotOwnedBy && !options.plotOwnedBy(e.int, ownerId, slot)) continue;
                 if (!buildings.some(b => b.building === e.name)) buildings.push({ building: e.name, plot: e.int });
@@ -315,7 +318,7 @@ export function parseCityObjects(
             const population = payload.readInt32LE(header0 + 32);
             religions.unshift({ religion: null, followers: population - religions.reduce((n, r) => n + r.followers, 0), pressure: null });
         }
-        const unitsTable = tables.find(t => t.kind === 'KIND_UNIT' && t.stride === 8 && t.entries.length > 100);
+        const unitsTable = tables.find(t => t.kind === 'KIND_UNIT' && t.stride === 8 && t.count > 100);
         const food = unitsTable ? payload.readInt32LE(unitsTable.start + FOOD_AFTER_UNITS) / 256 : null;
         cities.push({
             name, ownerId, cityIndex, currentProduction, ...(productionPlot ? { productionPlot } : {}),

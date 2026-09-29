@@ -139,12 +139,12 @@ describe('typed tables', () => {
         const techs = ['TECH_POTTERY', 'TECH_MINING', 'TECH_SAILING'];
         techs.forEach((t, i) => { buf.writeUInt32LE(civ6Hash(t), 60 + i * 8); buf.writeUInt32LE(t === 'TECH_SAILING' ? 6810 : 0, 64 + i * 8); });
         const tables = detectTypedTables(buf);
-        expect(tables.map(t => [t.kind, t.start, t.stride, t.entries.length])).toEqual([
+        expect(tables.map(t => [t.kind, t.start, t.stride, t.count])).toEqual([
             ['KIND_PROMOTION', 10, 5, 4],
             ['KIND_TECH', 60, 8, 3],
         ]);
-        expect(activeEntries(tables[0]!)).toEqual([{ name: 'PROMOTION_RANGER', int: 1 }]);
-        expect(activeEntries(tables[1]!)).toEqual([{ name: 'TECH_SAILING', int: 6810 }]);
+        expect(activeEntries(buf, tables[0]!)).toEqual([{ name: 'PROMOTION_RANGER', int: 1 }]);
+        expect(activeEntries(buf, tables[1]!)).toEqual([{ name: 'TECH_SAILING', int: 6810 }]);
         expect(detectTypedTables(buf, { kinds: new Set(['KIND_TECH']) })).toHaveLength(1);
     });
 

@@ -53,7 +53,7 @@ export function parseGovernors(payload: Buffer, players: Civ6PlayerState[], tabl
             out.push({
                 playerIndex,
                 governor: type.name,
-                promotions: flags ? activeEntries(flags).map(e => e.name) : [],
+                promotions: flags ? activeEntries(payload, flags).map(e => e.name) : [],
                 cityOwnerId: cityId === -1 ? null : payload.readInt32LE(after) & 0xffff,
                 cityId: cityId === -1 ? null : cityId,
                 established: cityId === -1 ? null : payload.readInt32LE(after + 36) === 1,

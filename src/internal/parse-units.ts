@@ -257,9 +257,9 @@ export function parseUnitInstances(
         if (promotions && promotions.start - 24 >= 0) {
             unit.xp = payload.readUInt16LE(promotions.start - 24);
             unit.level = payload.readUInt16LE(promotions.start - 20);
-            unit.promotions = activeEntries(promotions).map(e => e.name);
+            unit.promotions = activeEntries(payload, promotions).map(e => e.name);
         }
-        if (abilities) unit.abilities = activeEntries(abilities).map(e => e.name);
+        if (abilities) unit.abilities = activeEntries(payload, abilities).map(e => e.name);
         const operations = unitOperations(payload, tables.find(t => t.kind === 'KIND_UNITOPERATION' && t.stride === 5));
         if (operations.length > 0) unit.operations = operations;
         const route = tradeRouteOperation(operations);

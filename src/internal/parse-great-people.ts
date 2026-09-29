@@ -14,7 +14,7 @@
 
 import { resolveTypeHash } from './hash-tables';
 import type { Civ6PlayerState } from './parse-players';
-import type { TypedTable } from './typed-tables';
+import { getTableEntry, type TypedTable } from './typed-tables';
 
 export interface Civ6GreatPersonOffer {
     /** `GREAT_PERSON_INDIVIDUAL_*`. */
@@ -54,12 +54,12 @@ export function parseGreatPeople(
         const from = players[i]!.payloadOffset;
         const to = players[i + 1]?.payloadOffset ?? payload.length;
         const lastUnit = Math.max(from, ...units.filter(u => u.ownerId === i && u.payloadOffset > from && u.payloadOffset < to).map(u => u.payloadOffset + UNIT_SPAN));
-        const mine = tables.filter(t => t.kind === 'KIND_GREAT_PERSON_CLASS' && t.stride === 8 && t.entries.length === CLASS_ENTRIES && t.start > lastUnit && t.start < to);
+        const mine = tables.filter(t => t.kind === 'KIND_GREAT_PERSON_CLASS' && t.stride === 8 && t.count === CLASS_ENTRIES && t.start > lastUnit && t.start < to);
         const [banked, perTurn] = mine;
         const points: Record<string, { banked: number; perTurn: number }> = {};
         if (banked && perTurn) {
             for (let k = 0; k < CLASS_ENTRIES; k++) {
-                const b = banked.entries[k]!, r = perTurn.entries[k]!;
+                const b = getTableEntry(payload, banked, k)!, r = getTableEntry(payload, perTurn, k)!;
                 if (b.int !== 0 || r.int !== 0) points[b.name] = { banked: b.int / 256, perTurn: r.int / 256 };
             }
         }

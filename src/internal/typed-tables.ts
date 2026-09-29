@@ -18,33 +18,67 @@ export interface TypedTable {
     start: number;
     /** Bytes from one entry's hash to the next: 4 (hashes only) + value width. */
     stride: number;
-    /** Entries in table order; `value` is the raw bytes after the hash, `int` those as LE int. */
-    entries: Array<{ name: string; offset: number; value: Buffer; int: number }>;
+    /** Number of entries in the table. */
+    count: number;
+    /** Name id for each entry (Uint16Array index is entry position, value is nameId). */
+    nameIds: Uint16Array;
 }
 
 /** Strides worth trying: bare hash list, u8, u16, u32, two u32s, three u32s. */
 const STRIDES = [4, 5, 6, 8, 12, 16] as const;
+/** Strides in reverse order (largest first). */
+const STRIDES_REVERSED = [...STRIDES].reverse();
 /** A "table" needs this many consecutive entries; fewer is coincidence in 10 MB of ints. */
 const MIN_ENTRIES = 3;
 
 let hashIndex: Map<number, Civ6Type> | null = null;
+let nameIdMap: Map<string, number> | null = null;
+let idToName: string[] | null = null;
+
 function index(): Map<number, Civ6Type> {
     if (hashIndex) return hashIndex;
     hashIndex = new Map();
+    nameIdMap = new Map();
+    idToName = [];
     for (const [kind, names] of Object.entries(civ6Types as Record<string, string[]>)) {
-        for (const name of names) hashIndex.set(civ6Hash(name), { name, kind });
+        for (const name of names) {
+            hashIndex.set(civ6Hash(name), { name, kind });
+            if (!nameIdMap.has(name)) {
+                const id = idToName.length;
+                nameIdMap.set(name, id);
+                idToName.push(name);
+            }
+        }
     }
     return hashIndex;
 }
 
-function readInt(value: Buffer): number {
-    switch (value.length) {
-        case 0: return 0;
-        case 1: return value.readUInt8(0);
-        case 2: return value.readUInt16LE(0);
-        case 3: return value.readUIntLE(0, 3);
-        default: return value.readUInt32LE(0);
+function getNameId(name: string): number {
+    if (!nameIdMap) index();
+    return nameIdMap!.get(name) ?? 0;
+}
+
+function getNameFromId(id: number): string {
+    if (!idToName) index();
+    return idToName![id] ?? '';
+}
+
+function readInt(payload: Buffer, start: number, length: number): number {
+    if (length === 0) return 0;
+    if (start + length > payload.length) length = payload.length - start;
+    switch (length) {
+        case 1: return payload.readUInt8(start);
+        case 2: return payload.readUInt16LE(start);
+        case 3: return payload.readUIntLE(start, 3);
+        default: return payload.readUInt32LE(start);
     }
+}
+
+/** Read the value at entry index i from a table in the payload. */
+export function tableInt(payload: Buffer, table: TypedTable, i: number): number {
+    if (i < 0 || i >= table.count) return 0;
+    const at = table.start + i * table.stride;
+    return readInt(payload, at + 4, table.stride - 4);
 }
 
 /**
@@ -70,7 +104,7 @@ export function detectTypedTables(
         if (!first || (options.kinds && !options.kinds.has(first.kind))) { off++; continue; }
         // Longest run over any stride, largest stride first so wider entries win ties.
         let best: { stride: number; count: number } | null = null;
-        for (const stride of [...STRIDES].reverse()) {
+        for (const stride of STRIDES_REVERSED) {
             let count = 1;
             while (off + count * stride + 4 <= to) {
                 const t = typeAt(off + count * stride);
@@ -80,19 +114,49 @@ export function detectTypedTables(
             if (count >= minEntries && (!best || count > best.count)) best = { stride, count };
         }
         if (!best) { off++; continue; }
-        const entries: TypedTable['entries'] = [];
+        const nameIds = new Uint16Array(best.count);
         for (let i = 0; i < best.count; i++) {
             const at = off + i * best.stride;
-            const value = payload.subarray(at + 4, Math.min(at + best.stride, to));
-            entries.push({ name: typeAt(at)!.name, offset: at, value, int: readInt(value) });
+            const name = typeAt(at)!.name;
+            nameIds[i] = getNameId(name);
         }
-        tables.push({ kind: first.kind, start: off, stride: best.stride, entries });
+        tables.push({ kind: first.kind, start: off, stride: best.stride, count: best.count, nameIds });
         off += best.count * best.stride;
     }
     return tables;
 }
 
 /** The entries of a table whose value is non-zero — "which promotions does it have". */
-export function activeEntries(table: TypedTable): Array<{ name: string; int: number }> {
-    return table.entries.filter(e => e.int !== 0).map(e => ({ name: e.name, int: e.int }));
+export function activeEntries(payload: Buffer, table: TypedTable): Array<{ name: string; int: number }> {
+    const result: Array<{ name: string; int: number }> = [];
+    for (let i = 0; i < table.count; i++) {
+        const int = tableInt(payload, table, i);
+        if (int !== 0) {
+            const nameId = table.nameIds[i];
+            const name = getNameFromId(nameId);
+            result.push({ name, int });
+        }
+    }
+    return result;
+}
+
+/** All entries in a table, including zeros. */
+export function allEntries(payload: Buffer, table: TypedTable): Array<{ name: string; int: number }> {
+    const result: Array<{ name: string; int: number }> = [];
+    for (let i = 0; i < table.count; i++) {
+        const int = tableInt(payload, table, i);
+        const nameId = table.nameIds[i];
+        const name = getNameFromId(nameId);
+        result.push({ name, int });
+    }
+    return result;
+}
+
+/** Get a single entry by index. */
+export function getTableEntry(payload: Buffer, table: TypedTable, i: number): { name: string; int: number } | undefined {
+    if (i < 0 || i >= table.count) return undefined;
+    const int = tableInt(payload, table, i);
+    const nameId = table.nameIds[i];
+    const name = getNameFromId(nameId);
+    return { name, int };
 }

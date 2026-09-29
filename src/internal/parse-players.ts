@@ -230,9 +230,9 @@ function readReligionFounded(payload: Buffer, from: number, to: number): Civ6Pla
     return null;
 }
 
-const names = (t: TypedTable | undefined) => (t ? activeEntries(t).map(e => e.name) : []);
-const scaled = (t: TypedTable | undefined, scale: number) =>
-    Object.fromEntries((t ? activeEntries(t) : []).map(e => [e.name, e.int / scale]));
+const names = (payload: Buffer, t: TypedTable | undefined) => (t ? activeEntries(payload, t).map(e => e.name) : []);
+const scaled = (payload: Buffer, t: TypedTable | undefined, scale: number) =>
+    Object.fromEntries((t ? activeEntries(payload, t) : []).map(e => [e.name, e.int / scale]));
 
 /**
  * Every player object, in player-id order. `tables` may be passed in when the caller already
@@ -254,14 +254,14 @@ export function parsePlayerStates(payload: Buffer, tables?: TypedTable[]): Civ6P
     const players: Civ6PlayerState[] = [];
     for (let i = 0; i < all.length; i++) {
         const progress = all[i]!;
-        if (progress.kind !== 'KIND_TECH' || progress.stride !== 8 || progress.entries.length !== TECH_COUNT) continue;
+        if (progress.kind !== 'KIND_TECH' || progress.stride !== 8 || progress.count !== TECH_COUNT) continue;
         const boosted = all[i - 1];
         const researched = all[i - 2];
         if (!researched || !boosted) continue;
         if (researched.kind !== 'KIND_TECH' || researched.stride !== 5 || boosted.kind !== 'KIND_TECH' || boosted.stride !== 5) continue;
 
         const yields = lastBefore(all, i - 2, t => t.kind === 'KIND_YIELD' && t.stride === 8, 6);
-        const unitsTrained = lastBefore(all, i - 2, t => t.kind === 'KIND_UNIT' && t.stride === 8 && t.entries.length > 100, 8);
+        const unitsTrained = lastBefore(all, i - 2, t => t.kind === 'KIND_UNIT' && t.stride === 8 && t.count > 100, 8);
         const civicProgress = lastBefore(all, i - 2, t => t.kind === 'KIND_CIVIC' && t.stride === 8);
         const civicIndex = civicProgress ? all.indexOf(civicProgress) : -1;
         const civicsInspired = civicIndex > 1 ? all[civicIndex - 1] : undefined;
@@ -288,7 +288,7 @@ export function parsePlayerStates(payload: Buffer, tables?: TypedTable[]): Civ6P
         const governmentS5 = governmentS8 ? lastBefore(all, all.indexOf(governmentS8), t => t.kind === 'KIND_GOVERNMENT' && t.stride === 5, 2) : undefined;
         const firstGovernment = governmentS5 ?? governmentS8;
         const government = firstGovernment ? scanForType(payload, firstGovernment.start - 4, firstGovernment.start - 64, 'KIND_GOVERNMENT') : null;
-        const civicEnd = civicProgress ? civicProgress.start + civicProgress.stride * civicProgress.entries.length : 0;
+        const civicEnd = civicProgress ? civicProgress.start + civicProgress.stride * civicProgress.count : 0;
         const promotionClasses = lastBefore(all, i - 2, t => t.kind === 'KIND_PROMOTION_CLASS' && t.stride === 8, 40);
         const religion = promotionClasses ? religionRecord(payload, promotionClasses.start) : null;
 
@@ -314,25 +314,25 @@ export function parsePlayerStates(payload: Buffer, tables?: TypedTable[]): Civ6P
         players.push({
             playerIndex: players.length,
             playerId: players.length,
-            techsResearched: names(researched),
-            techsBoosted: names(boosted),
-            techProgress: scaled(progress, 256),
+            techsResearched: names(payload, researched),
+            techsBoosted: names(payload, boosted),
+            techProgress: scaled(payload, progress, 256),
             scienceOverflow: payload.readInt32LE(researched.start - 16) / 256,
             cultureOverflow: civicsOk ? civicOverflow(payload, civicEnd) : 0,
             currentResearch: typeAt(payload, researched.start - 20, 'KIND_TECH'),
-            civicsCompleted: civicsOk ? names(civicsCompleted) : [],
-            civicsInspired: civicsOk ? names(civicsInspired) : [],
-            civicProgress: civicsOk ? scaled(civicProgress, 256) : {},
+            civicsCompleted: civicsOk ? names(payload, civicsCompleted) : [],
+            civicsInspired: civicsOk ? names(payload, civicsInspired) : [],
+            civicProgress: civicsOk ? scaled(payload, civicProgress, 256) : {},
             currentCivic: civicsOk ? scanForType(payload, civicEnd, civicEnd + 16, 'KIND_CIVIC') : null,
             government,
             // A card never slotted cannot be slotted now: an empty legacy set (city-states) means
             // whatever the backwards scan found ahead of the table is not a slot list.
             policiesSlotted: slottedTable
-                ? slottedTable.entries.filter(e => e.int >= 0 && e.int <= 15).map(e => ({ policy: e.name, slot: e.int }))
-                : civicsOk && civicsCompleted && names(everSlotted).length > 0 ? slottedPolicies(payload, civicsCompleted.start) : [],
-            policiesEverSlotted: names(everSlotted),
-            yields: scaled(yields, 256),
-            unitsTrained: scaled(unitsTrained, 1),
+                ? activeEntries(payload, slottedTable).filter(e => e.int >= 0 && e.int <= 15).map(e => ({ policy: e.name, slot: e.int }))
+                : civicsOk && civicsCompleted && names(payload, everSlotted).length > 0 ? slottedPolicies(payload, civicsCompleted.start) : [],
+            policiesEverSlotted: names(payload, everSlotted),
+            yields: scaled(payload, yields, 256),
+            unitsTrained: scaled(payload, unitsTrained, 1),
             gold: payload.readInt32LE(researched.start + GOLD_OFFSET) / 256,
             goldPerTurn: payload.readInt32LE(researched.start + GOLD_PER_TURN_OFFSET) / 256,
             faith: religion?.faith ?? null,
@@ -340,12 +340,12 @@ export function parsePlayerStates(payload: Buffer, tables?: TypedTable[]): Civ6P
             eraScore: null,
             stockpiles,
             religionFounded,
-            goodyHutsReceived: scaled(goody, 1),
+            goodyHutsReceived: scaled(payload, goody, 1),
             favor,
-            continents: names(continents),
-            governmentsUnlocked: names(governmentS8),
-            naturalWondersFound: names(naturalWonders),
-            unitTypesSeen: names(unitTypesSeen),
+            continents: names(payload, continents),
+            governmentsUnlocked: names(payload, governmentS8),
+            naturalWondersFound: names(payload, naturalWonders),
+            unitTypesSeen: names(payload, unitTypesSeen),
             payloadOffset: researched.start,
         });
     }
